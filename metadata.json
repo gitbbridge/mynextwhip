@@ -1,0 +1,8 @@
+{
+  "name": "MyNextWhip - Honest Affordable Car Marketplace",
+  "description": "Find your next whip. Affordable cars, trucks, projects, and daily drivers under $10,000 honestly represented with video cold starts and transparent Whip Reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
