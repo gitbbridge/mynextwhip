@@ -1343,7 +1343,7 @@ export const SEED_OFFERS: Offer[] = [
     id: 'off_2',
     listingId: 'whip_miata_1993',
     listingTitle: '1993 Mazda Miata NA (Pop-ups)',
-    listingImage: 'https://images.unsplash.com/photo-1541348263662-e0c8de4259ba?auto=format&fit=crop&w=400&q=80',
+    listingImage: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=400&q=80',
     listingPrice: 4800,
     buyerId: 'user_mike',
     buyerName: 'Mike Reynolds',
