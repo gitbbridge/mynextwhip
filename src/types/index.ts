@@ -125,13 +125,39 @@ export interface ListingLocation {
   neighborhood?: string;
 }
 
+export interface AuctionBid {
+  id: string;
+  listingId: string;
+  bidderId: string;
+  bidderName: string;
+  bidderAvatar: string;
+  amount: number;
+  createdAt: string;
+}
+
+export interface AuctionDetails {
+  startingBid: number;
+  reservePrice?: number; // undefined or 0 means No Reserve
+  isNoReserve: boolean;
+  currentBid: number;
+  currentHighBidderId?: string;
+  currentHighBidderName?: string;
+  bidsCount: number;
+  endsAt: string; // ISO date string
+  durationDays: number;
+  bids: AuctionBid[];
+  antiSnipingTriggered?: boolean;
+}
+
 export interface Listing {
   id: string;
   slug: string;
   vehicle: Vehicle;
   sellerId: string;
   seller: User;
-  askingPrice: number; // in dollars
+  askingPrice: number; // in dollars (or starting bid / current bid)
+  listingFormat?: 'FIXED_PRICE' | 'AUCTION';
+  auction?: AuctionDetails;
   status: ListingStatus;
   category: VibeCategory;
   location: ListingLocation;
@@ -263,7 +289,9 @@ export interface SearchFilterState {
   hasWalkaround?: boolean;
   hasServiceRecords?: boolean;
   sellerType?: 'ALL' | 'PRIVATE' | 'DEALER';
-  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'distance' | 'mileage_asc';
+  listingFormat?: 'ALL' | 'FIXED_PRICE' | 'AUCTION';
+  noReserveOnly?: boolean;
+  sortBy?: 'newest' | 'price_asc' | 'price_desc' | 'distance' | 'mileage_asc' | 'ending_soon' | 'bids_desc';
 }
 
 export interface AdminAuditLog {

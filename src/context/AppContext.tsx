@@ -54,6 +54,12 @@ interface AppContextType {
   offers: Offer[];
   createOffer: (listingId: string, amount: number, message?: string) => void;
   updateOfferStatus: (offerId: string, status: Offer['status']) => void;
+  placeAuctionBid: (listingId: string, amount: number) => { success: boolean; error?: string };
+  startAuctionForListing: (
+    listingId: string,
+    params: { startingBid: number; isNoReserve: boolean; reservePrice?: number; durationDays: number }
+  ) => { success: boolean; error?: string };
+  endAuctionEarly: (listingId: string, acceptHighBid?: boolean) => void;
   appointments: Appointment[];
   createAppointment: (listingId: string, date: string, timeSlot: string, safeMeetupNote: string) => void;
   updateAppointmentStatus: (aptId: string, status: Appointment['status']) => void;
@@ -305,6 +311,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (searchFilters.sellerType === 'PRIVATE' && listing.seller.isDealer) return false;
         if (searchFilters.sellerType === 'DEALER' && !listing.seller.isDealer) return false;
 
+        // Listing Format (Auction vs Fixed)
+        if (searchFilters.listingFormat && searchFilters.listingFormat !== 'ALL') {
+          if (searchFilters.listingFormat === 'AUCTION' && listing.listingFormat !== 'AUCTION') return false;
+          if (searchFilters.listingFormat === 'FIXED_PRICE' && listing.listingFormat === 'AUCTION') return false;
+        }
+
+        // No Reserve Only
+        if (searchFilters.noReserveOnly && (!listing.auction || !listing.auction.isNoReserve)) {
+          return false;
+        }
+
         // Keyword query
         if (searchFilters.keyword) {
           const kw = searchFilters.keyword.toLowerCase();
@@ -332,6 +349,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return true;
       })
       .sort((a, b) => {
+        if (searchFilters.sortBy === 'ending_soon') {
+          const aEnd = a.auction ? new Date(a.auction.endsAt).getTime() : 9999999999999;
+          const bEnd = b.auction ? new Date(b.auction.endsAt).getTime() : 9999999999999;
+          return aEnd - bEnd;
+        }
+        if (searchFilters.sortBy === 'bids_desc') {
+          const aBids = a.auction?.bidsCount || 0;
+          const bBids = b.auction?.bidsCount || 0;
+          return bBids - aBids;
+        }
         if (searchFilters.sortBy === 'price_asc') return a.askingPrice - b.askingPrice;
         if (searchFilters.sortBy === 'price_desc') return b.askingPrice - a.askingPrice;
         if (searchFilters.sortBy === 'distance') return (a.distanceMiles || 0) - (b.distanceMiles || 0);
@@ -405,6 +432,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOffers(MarketplaceStorage.getOffers());
     setAllListings(MarketplaceStorage.getListings());
     showNotification(`Offer marked as ${status}`, 'info');
+  };
+
+  // Live Auctions
+  const placeAuctionBid = (listingId: string, amount: number) => {
+    const res = MarketplaceStorage.placeAuctionBid(listingId, currentUser, amount);
+    if (res.success) {
+      setAllListings(MarketplaceStorage.getListings());
+      setConversations(MarketplaceStorage.getConversations());
+      showNotification(`Bid of $${amount.toLocaleString()} placed! You are currently the highest bidder.`, 'success');
+      return { success: true };
+    } else {
+      showNotification(res.error || 'Could not place bid.', 'warning');
+      return { success: false, error: res.error };
+    }
+  };
+
+  const startAuctionForListing = (
+    listingId: string,
+    params: { startingBid: number; isNoReserve: boolean; reservePrice?: number; durationDays: number }
+  ) => {
+    const res = MarketplaceStorage.startAuctionForListing(listingId, params);
+    if (res.success) {
+      setAllListings(MarketplaceStorage.getListings());
+      showNotification(`Live Auction started! Bidders can now place bids.`, 'success');
+      return { success: true };
+    } else {
+      showNotification(res.error || 'Could not start auction.', 'warning');
+      return { success: false, error: res.error };
+    }
+  };
+
+  const endAuctionEarly = (listingId: string, acceptHighBid: boolean = true) => {
+    const res = MarketplaceStorage.endAuctionEarly(listingId, acceptHighBid);
+    if (res.success) {
+      setAllListings(MarketplaceStorage.getListings());
+      showNotification(`Auction ended early. ${acceptHighBid ? 'Current high bid accepted!' : ''}`, 'info');
+    }
   };
 
   // Appointments
@@ -520,6 +584,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         offers,
         createOffer,
         updateOfferStatus,
+        placeAuctionBid,
+        startAuctionForListing,
+        endAuctionEarly,
         appointments,
         createAppointment,
         updateAppointmentStatus,

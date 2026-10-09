@@ -197,6 +197,43 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
+          {/* Auction & Format Filter */}
+          <div className="p-3.5 bg-zinc-900 text-white rounded-xl space-y-3">
+            <span className="block text-xs font-bold uppercase tracking-wider text-orange-400">
+              Listing Format & Auctions
+            </span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: 'All', value: 'ALL' },
+                { label: 'Auctions', value: 'AUCTION' },
+                { label: 'Fixed Price', value: 'FIXED_PRICE' },
+              ].map((fmt) => (
+                <button
+                  key={fmt.value}
+                  type="button"
+                  onClick={() => setSearchFilters({ listingFormat: fmt.value as any })}
+                  className={`py-1.5 px-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                    (searchFilters.listingFormat || 'ALL') === fmt.value
+                      ? 'bg-[#EA580C] text-white border-orange-500'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'
+                  }`}
+                >
+                  {fmt.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-300 cursor-pointer pt-1 border-t border-zinc-800">
+              <input
+                type="checkbox"
+                checked={searchFilters.noReserveOnly || false}
+                onChange={(e) => setSearchFilters({ noReserveOnly: e.target.checked })}
+                className="w-4 h-4 text-[#EA580C] rounded focus:ring-orange-500"
+              />
+              <span>No Reserve Auctions Only</span>
+            </label>
+          </div>
+
           {/* Evidence Checkboxes - Principle 2 */}
           <div className="p-3.5 bg-orange-50/70 border border-orange-200/80 rounded-xl space-y-2.5">
             <span className="block text-xs font-bold uppercase tracking-wider text-orange-950">

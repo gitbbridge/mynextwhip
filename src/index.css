@@ -3,19 +3,22 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: #0F172A;
+    background-color: #FAFAFB;
+    -webkit-font-smoothing: antialiased;
   }
   
-  h1, h2, h3, .font-heading {
+  h1, h2, h3, h4, .font-heading {
     font-family: 'Cabinet Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
   }
 
-  .font-mono-numbers {
-    font-family: 'JetBrains Mono', monospace;
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Custom scrollbar for mobile swipe cards */
+/* Subtle custom scrollbar */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

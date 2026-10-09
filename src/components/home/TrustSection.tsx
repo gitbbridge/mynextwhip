@@ -1,133 +1,106 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { Eye, Video, FileCheck, ArrowRight, ShieldCheck, HeartHandshake, CheckCircle } from 'lucide-react';
+import { Eye, Video, FileCheck, ArrowRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const TrustSection: React.FC = () => {
   const { navigateTo } = useApp();
 
   return (
-    <section className="py-16 bg-white border-b border-zinc-200">
+    <section className="py-16 bg-[#FAFAFB] border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Section 1: What makes a listing different */}
+        {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#EA580C] bg-orange-50 px-2.5 py-1 rounded border border-orange-200/80">
-            Marketplace Philosophy
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-black text-zinc-900 tracking-tight font-heading mt-3 uppercase">
-            WHAT MAKES A MYNEXTWHIP LISTING DIFFERENT?
+          <div className="text-xs font-semibold uppercase tracking-wider text-[#C2410C] mb-2">
+            The Transparency Standard
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight font-heading text-balance">
+            What makes a MyNextWhip listing different.
           </h2>
-          <p className="text-zinc-600 mt-2 text-sm sm:text-base">
-            No ghost listings, no scam pricing, and no sugarcoated descriptions. Here’s how we keep it real.
+          <p className="text-slate-600 mt-3 text-sm sm:text-base leading-relaxed text-balance">
+            Traditional car sites encourage sellers to wipe codes, gloss over rust, and hide blemishes. We created a standard that rewards upfront honesty.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        {/* 3 Pillar Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
-          <div className="bg-[#FAFBFD] border border-zinc-200 rounded-2xl p-6 sm:p-7 relative overflow-hidden group hover:border-[#EA580C]/40 transition shadow-xs">
-            <div className="w-12 h-12 rounded-xl bg-orange-100 text-[#EA580C] flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
-              <Eye className="w-6 h-6 stroke-[2.2]" />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#C2410C] flex items-center justify-center mb-5">
+              <Eye className="w-5 h-5 stroke-[2]" />
             </div>
-            <h3 className="text-lg font-black text-zinc-900 font-heading uppercase tracking-tight">
-              SEE THE PROBLEMS
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+              Upfront Mechanical Disclosures
             </h3>
-            <p className="text-sm font-semibold text-[#EA580C] mt-1">
-              Sellers are encouraged to disclose what's wrong.
+            <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed">
+              Sellers list known issues like oil seeps, AC leaks, or body rust directly. Every disclosed issue generates an automated inspection checklist so buyers know exactly what questions to ask in person.
             </p>
-            <p className="text-xs sm:text-sm text-zinc-600 mt-3 leading-relaxed">
-              We made disclosing check engine codes, oil seeps, AC issues, and body rust normal and rewarded. Buyers receive an automated, tailored "What to Ask the Seller" inspection checklist for every issue disclosed.
-            </p>
-            <div className="mt-4 pt-3 border-t border-zinc-200 text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Full Whip Report on every listing</span>
+            <div className="mt-5 pt-3.5 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Tailored buyer questions for each vehicle</span>
             </div>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-[#FAFBFD] border border-zinc-200 rounded-2xl p-6 sm:p-7 relative overflow-hidden group hover:border-[#EA580C]/40 transition shadow-xs">
-            <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
-              <Video className="w-6 h-6 stroke-[2.2]" />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-5">
+              <Video className="w-5 h-5 stroke-[2]" />
             </div>
-            <h3 className="text-lg font-black text-zinc-900 font-heading uppercase tracking-tight">
-              HEAR IT RUN
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+              Cold-Start Video Audio & Video
             </h3>
-            <p className="text-sm font-semibold text-blue-700 mt-1">
-              Cold-start and walkaround videos.
+            <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed">
+              Anyone can wax paint in the sun. We ask sellers for a true cold-start video — hear the starter motor crank, listen to the exhaust note, and watch the idle settle before driving out for a test drive.
             </p>
-            <p className="text-xs sm:text-sm text-zinc-600 mt-3 leading-relaxed">
-              Anyone can polish paint for a photo. We prompt sellers to upload a real cold-start video—letting you hear the starter motor, listen for exhaust ticks, and watch the idle settle before driving out to look at it.
-            </p>
-            <div className="mt-4 pt-3 border-t border-zinc-200 text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Audio/video proof on mobile or desktop</span>
+            <div className="mt-5 pt-3.5 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Watch starter & idle audio directly in-browser</span>
             </div>
           </div>
 
           {/* Card 3 */}
-          <div className="bg-[#FAFBFD] border border-zinc-200 rounded-2xl p-6 sm:p-7 relative overflow-hidden group hover:border-[#EA580C]/40 transition shadow-xs">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
-              <FileCheck className="w-6 h-6 stroke-[2.2]" />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-5">
+              <FileCheck className="w-5 h-5 stroke-[2]" />
             </div>
-            <h3 className="text-lg font-black text-zinc-900 font-heading uppercase tracking-tight">
-              KNOW THE DETAILS
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+              Verified Title & NHTSA Specs
             </h3>
-            <p className="text-sm font-semibold text-emerald-700 mt-1">
-              VIN, mileage, and vehicle facts are clearly displayed.
+            <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed">
+              Every listing is decoded against NHTSA federal vehicle data. Title brand (Clean, Rebuilt, Salvage), drivetrain configuration, and odometer readings are clearly presented without misleading fine print.
             </p>
-            <p className="text-xs sm:text-sm text-zinc-600 mt-3 leading-relaxed">
-              Every listing is decoded against NHTSA federal database specifications. Title status (Clean, Rebuilt, Salvage), maintenance receipts, and odometer readings are upfront—not buried in confusing fine print.
-            </p>
-            <div className="mt-4 pt-3 border-t border-zinc-200 text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="mt-5 pt-3.5 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Standard 17-character VIN verification</span>
             </div>
           </div>
         </div>
 
-        {/* Section 2: "NOT EVERY CAR HAS TO BE PERFECT" statement banner */}
-        <div className="mt-16 bg-[#12151A] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden">
-          <div className="relative z-10 max-w-3xl">
-            <span className="text-xs font-bold uppercase tracking-wider text-orange-400 bg-orange-950/80 px-2.5 py-1 rounded border border-orange-900">
-              Honest Automotive Community
-            </span>
-            <h3 className="text-2xl sm:text-4xl font-black font-heading tracking-tight mt-4 uppercase leading-tight">
-              NOT EVERY CAR HAS TO BE PERFECT.
-            </h3>
-            
-            <div className="mt-4 space-y-1.5 text-zinc-300 text-sm sm:text-base font-medium">
-              <p className="flex items-center gap-2">
-                <span className="text-[#EA580C] font-bold">―</span> Some have 200,000 miles.
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-[#EA580C] font-bold">―</span> Some need mechanical work.
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-[#EA580C] font-bold">―</span> Some have a little rust.
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-[#EA580C] font-bold">―</span> Some are weird as hell.
-              </p>
-              <p className="flex items-center gap-2 text-white font-bold">
-                <span className="text-[#EA580C] font-bold">―</span> Some are exactly what somebody else has been looking for.
-              </p>
+        {/* Editorial Community Manifesto */}
+        <div className="mt-14 bg-slate-900 rounded-2xl p-8 sm:p-12 text-white relative overflow-hidden shadow-lg shadow-slate-900/10">
+          <div className="max-w-2xl relative z-10">
+            <div className="text-xs font-semibold uppercase tracking-wider text-orange-400 mb-3">
+              The Real Marketplace Philosophy
             </div>
+            <h3 className="text-2xl sm:text-3xl font-bold font-heading tracking-tight text-white leading-tight">
+              Not every car has to be perfect. It just has to be honest.
+            </h3>
 
-            <p className="mt-5 text-sm sm:text-base text-zinc-300 font-semibold">
-              That's what MyNextWhip is for.
+            <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
+              Some have 200,000 highway miles. Some need mechanical work on a Saturday afternoon. Some have honest trail scratches. And some are exactly what somebody has been searching months to find.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => navigateTo('browse')}
-                className="bg-[#EA580C] hover:bg-[#C2410C] text-white font-black px-6 py-3 rounded-xl text-sm transition shadow-lg shadow-orange-950/50 flex items-center gap-2 cursor-pointer"
+                className="bg-white hover:bg-slate-100 text-slate-900 font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
               >
-                <span>Find Your Next Whip</span>
-                <ArrowRight className="w-4 h-4" />
+                Browse Current Whips
               </button>
               <button
                 onClick={() => navigateTo('sell')}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-6 py-3 rounded-xl text-sm border border-zinc-700 transition cursor-pointer"
+                className="bg-slate-800 hover:bg-slate-700 text-white font-medium px-4 py-2.5 rounded-xl text-sm border border-slate-700 transition-colors cursor-pointer"
               >
-                <span>List in 5–10 Minutes ($19)</span>
+                List Your Whip ($19)
               </button>
             </div>
           </div>

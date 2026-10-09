@@ -9,6 +9,7 @@ import {
   AdminAuditLog,
   SavedSearch,
   ListingStatus,
+  AuctionBid,
 } from '../types';
 import {
   SEED_USERS,
@@ -83,6 +84,18 @@ export class MarketplaceStorage {
     }
     if (!localStorage.getItem(STORAGE_KEYS.LISTINGS)) {
       safeSet(STORAGE_KEYS.LISTINGS, SEED_LISTINGS);
+    } else {
+      // Synchronize seed auctions if stored listings predate auction feature
+      const stored = safeGet<Listing[]>(STORAGE_KEYS.LISTINGS, []);
+      const astro = stored.find((l) => l.id === 'whip_astro_2005');
+      if (astro && astro.listingFormat !== 'AUCTION') {
+        const seedAstro = SEED_LISTINGS.find((l) => l.id === 'whip_astro_2005');
+        if (seedAstro && seedAstro.auction) {
+          astro.listingFormat = 'AUCTION';
+          astro.auction = seedAstro.auction;
+          safeSet(STORAGE_KEYS.LISTINGS, stored);
+        }
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.OFFERS)) {
       safeSet(STORAGE_KEYS.OFFERS, SEED_OFFERS);
@@ -255,6 +268,130 @@ export class MarketplaceStorage {
     }
 
     return offer;
+  }
+
+  // Auctions & Bidding
+  static placeAuctionBid(
+    listingId: string,
+    bidder: User,
+    amount: number
+  ): { success: boolean; error?: string; listing?: Listing } {
+    const listings = this.getListings();
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing) return { success: false, error: 'Listing not found.' };
+    if (listing.listingFormat !== 'AUCTION' || !listing.auction) {
+      return { success: false, error: 'This vehicle is not listed as an auction.' };
+    }
+
+    const now = Date.now();
+    const endsTime = new Date(listing.auction.endsAt).getTime();
+    if (now > endsTime) {
+      return { success: false, error: 'This auction has already ended.' };
+    }
+
+    const currentHigh = listing.auction.currentBid || listing.auction.startingBid;
+    const minIncrement = currentHigh < 2000 ? 50 : 100;
+    const minRequiredBid = currentHigh + minIncrement;
+
+    if (amount < minRequiredBid) {
+      return {
+        success: false,
+        error: `Bid must be at least $${minRequiredBid.toLocaleString()} (+$${minIncrement} minimum increment).`,
+      };
+    }
+
+    // Anti-sniping: if bid placed in final 2 minutes, extend endsAt by 2 minutes
+    const twoMinutesMs = 2 * 60 * 1000;
+    let antiSniped = false;
+    if (endsTime - now < twoMinutesMs) {
+      listing.auction.endsAt = new Date(endsTime + twoMinutesMs).toISOString();
+      listing.auction.antiSnipingTriggered = true;
+      antiSniped = true;
+    }
+
+    const newBid: AuctionBid = {
+      id: `bid_${Date.now()}`,
+      listingId,
+      bidderId: bidder.id,
+      bidderName: bidder.name,
+      bidderAvatar: bidder.avatar,
+      amount,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!listing.auction.bids) {
+      listing.auction.bids = [];
+    }
+    listing.auction.bids.unshift(newBid);
+    listing.auction.currentBid = amount;
+    listing.auction.currentHighBidderId = bidder.id;
+    listing.auction.currentHighBidderName = bidder.name;
+    listing.auction.bidsCount = (listing.auction.bidsCount || 0) + 1;
+    listing.askingPrice = amount;
+
+    this.saveListing(listing);
+
+    // Notify via conversation stream
+    this.appendSystemChatMessage(
+      listing.id,
+      bidder.id,
+      listing.sellerId,
+      `Placed a live bid of $${amount.toLocaleString()} on the auction! (Current High Bidder)${
+        antiSniped ? ' · ⏱️ Anti-sniping: 2 minutes added to auction clock' : ''
+      }`
+    );
+
+    return { success: true, listing };
+  }
+
+  static startAuctionForListing(
+    listingId: string,
+    params: {
+      startingBid: number;
+      isNoReserve: boolean;
+      reservePrice?: number;
+      durationDays: number;
+    }
+  ): { success: boolean; listing?: Listing; error?: string } {
+    const listings = this.getListings();
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing) return { success: false, error: 'Vehicle not found.' };
+
+    listing.listingFormat = 'AUCTION';
+    listing.askingPrice = params.startingBid;
+    listing.auction = {
+      startingBid: params.startingBid,
+      isNoReserve: params.isNoReserve,
+      reservePrice: params.isNoReserve ? undefined : params.reservePrice,
+      currentBid: params.startingBid,
+      bidsCount: 0,
+      endsAt: new Date(Date.now() + params.durationDays * 24 * 3600 * 1000).toISOString(),
+      durationDays: params.durationDays,
+      bids: [],
+    };
+    listing.updatedAt = new Date().toISOString();
+
+    this.saveListing(listing);
+    return { success: true, listing };
+  }
+
+  static endAuctionEarly(
+    listingId: string,
+    acceptHighBid: boolean = true
+  ): { success: boolean; listing?: Listing; error?: string } {
+    const listings = this.getListings();
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing || !listing.auction) {
+      return { success: false, error: 'Auction not found.' };
+    }
+
+    listing.auction.endsAt = new Date().toISOString();
+    if (acceptHighBid && listing.auction.currentHighBidderId) {
+      listing.status = 'UNDER_OFFER';
+    }
+    listing.updatedAt = new Date().toISOString();
+    this.saveListing(listing);
+    return { success: true, listing };
   }
 
   // Appointments

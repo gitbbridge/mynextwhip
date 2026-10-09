@@ -35,6 +35,8 @@ import {
   Lock,
   Plus,
   Trash2,
+  Gavel,
+  Clock,
 } from 'lucide-react';
 
 const STEPS = [
@@ -70,6 +72,13 @@ export const SellWizard: React.FC = () => {
   const [bodyStyle, setBodyStyle] = useState<BodyStyle>('Sedan');
   const [category, setCategory] = useState<VibeCategory>('Daily Driver');
   const [modifications, setModifications] = useState('');
+
+  // Listing Format: Fixed Price vs Live Auction
+  const [listingFormat, setListingFormat] = useState<'FIXED_PRICE' | 'AUCTION'>('FIXED_PRICE');
+  const [startingBid, setStartingBid] = useState<string>('1000');
+  const [isNoReserve, setIsNoReserve] = useState(true);
+  const [reservePrice, setReservePrice] = useState<string>('3000');
+  const [auctionDurationDays, setAuctionDurationDays] = useState<number>(7);
 
   // Step 3: Issues
   const [selectedIssues, setSelectedIssues] = useState<DisclosedIssue[]>([]);
@@ -231,7 +240,18 @@ export const SellWizard: React.FC = () => {
         },
         sellerId: currentUser.id,
         seller: currentUser,
-        askingPrice: Number(askingPrice) || 4500,
+        askingPrice: listingFormat === 'AUCTION' ? (Number(startingBid) || 1000) : (Number(askingPrice) || 4500),
+        listingFormat,
+        auction: listingFormat === 'AUCTION' ? {
+          startingBid: Number(startingBid) || 1000,
+          reservePrice: isNoReserve ? undefined : (Number(reservePrice) || undefined),
+          isNoReserve,
+          currentBid: Number(startingBid) || 1000,
+          bidsCount: 0,
+          endsAt: new Date(Date.now() + auctionDurationDays * 24 * 3600 * 1000).toISOString(),
+          durationDays: auctionDurationDays,
+          bids: [],
+        } : undefined,
         status: 'PENDING_REVIEW', // Enters moderation state machine!
         category,
         location: loc,
@@ -291,8 +311,12 @@ export const SellWizard: React.FC = () => {
               <span className="font-bold font-heading">{decodedData?.year} {decodedData?.make} {decodedData?.model}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">Asking Price:</span>
-              <span className="font-mono font-bold">${Number(askingPrice).toLocaleString()}</span>
+              <span className="text-zinc-500">Format & Price:</span>
+              <span className="font-mono font-bold text-zinc-900">
+                {listingFormat === 'AUCTION'
+                  ? `Live Auction ($${Number(startingBid).toLocaleString()} Start${isNoReserve ? ' · No Reserve' : ''})`
+                  : `$${Number(askingPrice).toLocaleString()} Fixed`}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Known Issues Disclosed:</span>
@@ -324,28 +348,28 @@ export const SellWizard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] pb-24">
+    <div className="min-h-screen bg-[#FAFAFB] pb-24">
       {/* Top Header & Step Progress Bar */}
-      <div className="bg-white border-b border-zinc-200 sticky top-16 z-30 shadow-xs">
+      <div className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-2xs">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#EA580C] font-mono">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#C2410C]">
                 Step {currentStep + 1} of {STEPS.length}
               </span>
-              <h1 className="text-lg sm:text-xl font-black text-zinc-900 font-heading">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 font-heading">
                 {STEPS[currentStep]}
               </h1>
             </div>
-            <span className="text-xs font-mono font-bold text-zinc-500">
+            <span className="text-xs font-semibold text-slate-500 tabular-nums">
               {Math.round(((currentStep + 1) / STEPS.length) * 100)}% Complete
             </span>
           </div>
 
           {/* Progress bar line */}
-          <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
             <div
-              className="bg-gradient-to-r from-[#EA580C] to-[#F97316] h-full transition-all duration-300 rounded-full"
+              className="bg-slate-900 h-full transition-all duration-300 rounded-full"
               style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
             />
           </div>
@@ -354,25 +378,25 @@ export const SellWizard: React.FC = () => {
 
       {/* Main Wizard Form Container */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <div className="bg-white rounded-3xl border border-zinc-200 p-6 sm:p-8 shadow-xs">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs">
           {/* STEP 1: VIN Identification */}
           {currentStep === 0 && (
             <div className="space-y-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#EA580C]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#C2410C]">
                   Step 1: Vehicle Identification
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 font-heading mt-1">
-                  Let's find your whip.
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 font-heading mt-1">
+                  Identify your vehicle.
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-600 mt-1">
+                <p className="text-xs sm:text-sm text-slate-600 mt-1">
                   Enter your 17-character VIN. We automatically decode Year, Make, Model, Trim, and Engine via the NHTSA database.
                 </p>
               </div>
 
               {/* VIN Input & Decode Button */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   17-Character VIN
                 </label>
                 <div className="flex gap-2">
@@ -382,15 +406,15 @@ export const SellWizard: React.FC = () => {
                     placeholder="e.g. 5TFRX44N88Z482910"
                     value={vinInput}
                     onChange={(e) => setVinInput(e.target.value.toUpperCase())}
-                    className="flex-1 py-3 px-4 bg-zinc-50 border border-zinc-300 rounded-xl text-base font-mono font-bold text-zinc-900 tracking-wider focus:outline-none focus:border-[#EA580C]"
+                    className="flex-1 py-2.5 px-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono font-semibold text-slate-900 tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900"
                   />
                   <button
                     type="button"
                     disabled={isDecoding || vinInput.length !== 17}
                     onClick={() => handleDecodeVin(vinInput)}
-                    className="px-6 py-3 bg-[#EA580C] hover:bg-[#C2410C] disabled:bg-zinc-300 text-white font-extrabold uppercase tracking-wider text-xs rounded-xl transition cursor-pointer"
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-xs rounded-xl transition cursor-pointer"
                   >
-                    {isDecoding ? 'Decoding...' : 'Decode'}
+                    {isDecoding ? 'Decoding...' : 'Decode VIN'}
                   </button>
                 </div>
 
@@ -403,8 +427,8 @@ export const SellWizard: React.FC = () => {
               </div>
 
               {/* Sample Enthusiast Test VIN Presets */}
-              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Quick-Fill Test VINs (Click to load):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -416,10 +440,10 @@ export const SellWizard: React.FC = () => {
                         setVinInput(sample.vin);
                         handleDecodeVin(sample.vin);
                       }}
-                      className="text-left p-2.5 bg-white border border-zinc-200 hover:border-[#EA580C] rounded-xl text-xs transition cursor-pointer"
+                      className="text-left p-2.5 bg-white border border-slate-200 hover:border-slate-400 rounded-xl text-xs transition cursor-pointer"
                     >
-                      <div className="font-bold text-zinc-900 truncate">{sample.label}</div>
-                      <div className="text-[11px] font-mono text-zinc-400">{sample.vin}</div>
+                      <div className="font-semibold text-slate-900 truncate">{sample.label}</div>
+                      <div className="text-[11px] font-mono text-slate-400">{sample.vin}</div>
                     </button>
                   ))}
                 </div>
@@ -459,29 +483,189 @@ export const SellWizard: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#EA580C]">
-                  Step 2: Basic Details
+                  Step 2: Basic Details & Format
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 font-heading mt-1">
-                  Tell us about price & location.
+                  Choose format, price & location.
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
-                    Asking Price ($ USD)
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                      type="number"
-                      step={50}
-                      value={askingPrice}
-                      onChange={(e) => setAskingPrice(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl font-mono text-base font-bold text-zinc-900 focus:outline-none focus:border-[#EA580C]"
-                    />
+              {/* Format Selector: Fixed Price vs Live Auction */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">
+                  Selling Format
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setListingFormat('FIXED_PRICE')}
+                    className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
+                      listingFormat === 'FIXED_PRICE'
+                        ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
+                        : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border-zinc-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-sm font-heading">Fixed Asking Price</span>
+                      {listingFormat === 'FIXED_PRICE' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#EA580C]" />
+                      )}
+                    </div>
+                    <p className={`text-xs mt-1 leading-snug ${listingFormat === 'FIXED_PRICE' ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                      Traditional classified listing. Set a firm price, review buyer offers, and coordinate meetups.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setListingFormat('AUCTION')}
+                    className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
+                      listingFormat === 'AUCTION'
+                        ? 'bg-orange-950/90 text-white border-orange-500 shadow-md ring-2 ring-orange-500/20'
+                        : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border-zinc-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Gavel className={`w-4 h-4 ${listingFormat === 'AUCTION' ? 'text-[#EA580C]' : 'text-zinc-500'}`} />
+                        <span className="font-extrabold text-sm font-heading">Live Auction</span>
+                      </div>
+                      {listingFormat === 'AUCTION' ? (
+                        <CheckCircle2 className="w-4 h-4 text-[#EA580C]" />
+                      ) : (
+                        <span className="text-[10px] bg-orange-100 text-orange-800 font-bold px-1.5 py-0.2 rounded uppercase">
+                          Popular
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs mt-1 leading-snug ${listingFormat === 'AUCTION' ? 'text-orange-200' : 'text-zinc-500'}`}>
+                      Competitive live bidding with countdown clock, anti-sniping protection, and reserve options.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Auction Configuration Box (when AUCTION selected) */}
+              {listingFormat === 'AUCTION' && (
+                <div className="p-5 bg-orange-50/80 border border-orange-200 rounded-2xl space-y-4 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <Gavel className="w-4 h-4 text-[#EA580C]" />
+                    <h3 className="font-bold text-sm text-zinc-900 font-heading">
+                      Auction Parameters
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                        Starting Bid ($ USD)
+                      </label>
+                      <div className="relative">
+                        <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                        <input
+                          type="number"
+                          step={50}
+                          value={startingBid}
+                          onChange={(e) => setStartingBid(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2.5 bg-white border border-zinc-300 rounded-xl font-mono text-sm font-bold text-zinc-900 focus:outline-none focus:border-[#EA580C]"
+                        />
+                      </div>
+                      <span className="text-[11px] text-zinc-500 mt-1 block">
+                        Low starting bids ($100–$1,000) attract the most early watchers.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                        Auction Duration
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[3, 5, 7].map((days) => (
+                          <button
+                            key={days}
+                            type="button"
+                            onClick={() => setAuctionDurationDays(days)}
+                            className={`py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                              auctionDurationDays === days
+                                ? 'bg-zinc-900 text-white border-zinc-900'
+                                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+                            }`}
+                          >
+                            {days} Days
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reserve Options */}
+                  <div className="pt-2 border-t border-orange-200/80">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">
+                      Reserve Price
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <label className="flex items-center gap-2 text-xs font-bold text-zinc-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="reserveChoice"
+                          checked={isNoReserve}
+                          onChange={() => setIsNoReserve(true)}
+                          className="w-4 h-4 text-[#EA580C]"
+                        />
+                        <span>No Reserve (Vehicle sells to highest bidder, highest engagement)</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-bold text-zinc-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="reserveChoice"
+                          checked={!isNoReserve}
+                          onChange={() => setIsNoReserve(false)}
+                          className="w-4 h-4 text-[#EA580C]"
+                        />
+                        <span>Set Hidden Reserve Price</span>
+                      </label>
+                    </div>
+
+                    {!isNoReserve && (
+                      <div className="mt-3 max-w-xs">
+                        <div className="relative">
+                          <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                          <input
+                            type="number"
+                            step={100}
+                            placeholder="e.g. 4000"
+                            value={reservePrice}
+                            onChange={(e) => setReservePrice(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 bg-white border border-zinc-300 rounded-xl font-mono text-sm font-bold text-zinc-900 focus:outline-none focus:border-[#EA580C]"
+                          />
+                        </div>
+                        <span className="text-[11px] text-zinc-500 mt-1 block">
+                          Hidden from buyers. If bids do not reach this price, you are not obligated to sell.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {listingFormat === 'FIXED_PRICE' && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
+                      Asking Price ($ USD)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                      <input
+                        type="number"
+                        step={50}
+                        value={askingPrice}
+                        onChange={(e) => setAskingPrice(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl font-mono text-base font-bold text-zinc-900 focus:outline-none focus:border-[#EA580C]"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1">
@@ -955,13 +1139,32 @@ export const SellWizard: React.FC = () => {
               <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-5 space-y-3 text-xs">
                 <div className="flex justify-between items-baseline border-b border-zinc-200 pb-3">
                   <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                        listingFormat === 'AUCTION'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-zinc-200 text-zinc-800'
+                      }`}>
+                        {listingFormat === 'AUCTION' ? `Live Auction (${auctionDurationDays} Days)` : 'Fixed Asking Price'}
+                      </span>
+                      {listingFormat === 'AUCTION' && isNoReserve && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 uppercase">
+                          No Reserve
+                        </span>
+                      )}
+                    </div>
                     <h3 className="text-lg font-black text-zinc-900 font-heading">
                       {decodedData?.year} {decodedData?.make} {decodedData?.model}
                     </h3>
                     <p className="text-zinc-500">{Number(mileage).toLocaleString()} miles · {titleStatus} Title</p>
                   </div>
-                  <div className="text-2xl font-black text-zinc-900 font-mono-numbers">
-                    ${Number(askingPrice).toLocaleString()}
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                      {listingFormat === 'AUCTION' ? 'Starting Bid' : 'Asking Price'}
+                    </span>
+                    <div className="text-2xl font-black text-zinc-900 font-mono-numbers">
+                      ${(listingFormat === 'AUCTION' ? Number(startingBid) : Number(askingPrice)).toLocaleString()}
+                    </div>
                   </div>
                 </div>
 
