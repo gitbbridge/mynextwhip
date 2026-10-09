@@ -481,7 +481,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_mia_1',
-        url: 'https://images.unsplash.com/photo-1541348263662-e0c8de4259ba?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
         label: 'Front Pop-Up Lights Up',
         type: 'photo',
       },
@@ -495,7 +495,7 @@ export const SEED_LISTINGS: Listing[] = [
     coldStartVideo: {
       id: 'vid_mia_cold',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1541348263662-e0c8de4259ba?auto=format&fit=crop&w=800&q=80',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
       label: 'Cold Start Video with Pop-Up Lights Actuation',
       type: 'video_cold_start',
       durationSeconds: 28,
