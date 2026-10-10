@@ -32,6 +32,9 @@ export type ListingStatus =
   | 'PENDING_REVIEW'
   | 'APPROVED'
   | 'ACTIVE'
+  | 'COMMITTED'
+  | 'SETTLED'
+  | 'ABANDONED'
   | 'UNDER_OFFER'
   | 'SOLD'
   | 'ARCHIVED';
@@ -157,6 +160,7 @@ export interface Listing {
   seller: User;
   askingPrice: number; // in dollars (or starting bid / current bid)
   listingFormat?: 'FIXED_PRICE' | 'AUCTION';
+  listingType?: 'BUY_IT_NOW' | 'LIVE_AUCTION';
   auction?: AuctionDetails;
   status: ListingStatus;
   category: VibeCategory;
@@ -299,9 +303,107 @@ export interface AdminAuditLog {
   adminId: string;
   adminName: string;
   action: string;
-  targetType: 'LISTING' | 'USER' | 'REPORT' | 'PAYMENT';
+  targetType: 'LISTING' | 'USER' | 'REPORT' | 'PAYMENT' | 'SYSTEM';
   targetId: string;
   targetSummary: string;
   timestamp: string;
   notes?: string;
 }
+
+// ---------------------------------------------------------------------------
+// NEW PRICING STRUCTURE & TRANSACTION COLLECTION FRAMEWORK
+// ---------------------------------------------------------------------------
+
+export type TransactionStatus = 
+  | 'HOLD_AUTHORIZED'       // $25 anti-flake authorization locked by Stripe
+  | 'CAPTURED_PERFORMANCE'  // Trade closed successfully, scaled performance fee captured
+  | 'CAPTURED_PENALTY'      // Buyer flaked without 2hr notice, $25 paid to seller
+  | 'RELEASED_VOID';        // Legitimate pass due to undisclosed flaw, $25 released
+
+export type AddonType = 'FLATBED_TOWING' | 'MOBILE_PPI' | 'TEMP_INSURANCE';
+
+export interface TransactionAddon {
+  id: string;
+  transactionId: string;
+  addonType: AddonType;
+  name: string;
+  price: number;
+  stripeChargeId?: string;
+  status: 'REQUESTED' | 'AUTHORIZED' | 'CAPTURED' | 'CANCELLED';
+  createdAt: string;
+  details?: string;
+}
+
+export interface Transaction {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  listingImage: string;
+  sellerId: string;
+  sellerName: string;
+  buyerId: string;
+  buyerName: string;
+  buyerCardLast4?: string;
+  stripePaymentIntentId: string; // Tracks the initial verification hold
+  status: TransactionStatus;
+  holdAmount: number; // $25.00
+  finalPrice?: number;
+  performanceFee?: number; // Scaled fee: $25, $49, $95, $99, $149
+  scheduledMeetTime?: string;
+  addons: TransactionAddon[];
+  payoutToSellerAmount?: number; // E.g. $25 penalty on buyer flake
+  resolutionNote?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Calculates dynamically scaled performance fee based on sub-$10k Front Range asset tiers:
+ * Buy It Now (BIN):
+ * - Under $3,000: $25.00
+ * - $3,000 to $6,000: $49.00
+ * - $6,000 to $10,000: $99.00
+ * - Over $10,000: $149.00
+ *
+ * Live Auction (Hammer Price):
+ * - Under $3,000: $25.00
+ * - $3,000 to $6,000: $95.00
+ * - $6,000 to $10,000: $149.00
+ * - Over $10,000: $149.00
+ */
+export const calculatePerformanceFee = (
+  finalSalePrice: number,
+  listingType: 'BUY_IT_NOW' | 'LIVE_AUCTION' = 'BUY_IT_NOW'
+): number => {
+  if (listingType === 'LIVE_AUCTION') {
+    if (finalSalePrice < 3000) return 25.0;
+    if (finalSalePrice <= 6000) return 95.0;
+    return 149.0;
+  }
+
+  // Buy It Now (BIN)
+  if (finalSalePrice < 3000) return 25.0;
+  if (finalSalePrice <= 6000) return 49.0;
+  if (finalSalePrice <= 10000) return 99.0;
+  return 149.0;
+};
+
+export const ADDON_PRICING: Record<AddonType, { name: string; price: number; description: string }> = {
+  MOBILE_PPI: {
+    name: 'Mobile Pre-Purchase Inspection (PPI)',
+    price: 95.0,
+    description: 'Certified independent Denver mechanic travels on-site for 50-point mechanical & OBD-II diagnostic check.',
+  },
+  FLATBED_TOWING: {
+    name: 'Local Flatbed Towing Dispatch',
+    price: 45.0,
+    description: 'Front Range flatbed towing to safely transport project or unregistered vehicle home.',
+  },
+  TEMP_INSURANCE: {
+    name: 'Temporary Transit Insurance (5-Day Drive-Away)',
+    price: 149.0,
+    description: 'Instant legally binding temporary comprehensive drive-away coverage for private party transport.',
+  },
+};
+

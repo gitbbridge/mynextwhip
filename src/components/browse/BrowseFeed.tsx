@@ -12,6 +12,12 @@ import {
   Car,
   Gavel,
   Flame,
+  Sparkles,
+  PlusCircle,
+  ShieldCheck,
+  Bell,
+  ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 import { RADIUS_OPTIONS } from '../../services/geoService';
 
@@ -24,10 +30,15 @@ export const BrowseFeed: React.FC = () => {
     resetFilters,
     saveCurrentSearch,
     activeMarket,
+    navigateTo,
+    isSeedDataEnabled,
+    restoreDemoData,
+    showNotification,
   } = useApp();
 
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(searchFilters.keyword || '');
+  const [emailAlertSubmitted, setEmailAlertSubmitted] = useState(false);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -333,8 +344,120 @@ export const BrowseFeed: React.FC = () => {
               <VehicleCard key={listing.id} listing={listing} />
             ))}
           </div>
+        ) : allListings.length === 0 ? (
+          /* EMPTY STATE 1: Clean Production Slate (Zero demo listings on the platform) */
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto my-8 shadow-xs">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold mb-5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Denver & Front Range · Clean Production Slate Active</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-950 font-heading tracking-tight">
+              Ready for verified local whips.
+            </h2>
+            <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed max-w-lg mx-auto">
+              You are viewing the pristine, live marketplace. All sample demo data has been purged. Be among the first Colorado owners to list your vehicle with full buyer transparency.
+            </p>
+
+            {/* Value props */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-8 text-left">
+              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <div className="text-[#C2410C] font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>$25 Anti-Flake</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Buyers link a card before meeting. No more ghosting or tire-kickers.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <div className="text-slate-900 font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>NHTSA VIN Match</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Free instant federal title & specs lookup right from the VIN plate.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <div className="text-slate-900 font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span>Zero Risk</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  "No trade, no fee" ecosystem commitment. Only pay upon settlement.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => navigateTo('sell')}
+                className="w-full sm:w-auto px-6 py-3 bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>List Your Whip First</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setEmailAlertSubmitted(true);
+                  showNotification('Notification alert set! We will notify you when new whips drop.', 'success');
+                }}
+                className="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
+              >
+                <Bell className="w-4 h-4 text-slate-500" />
+                <span>{emailAlertSubmitted ? 'Alert Subscribed ✓' : 'Notify Me When Whips Drop'}</span>
+              </button>
+            </div>
+
+            {/* Quick Demo Restorer for evaluators */}
+            <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-400">
+              <span>Evaluating or testing the platform?</span>
+              <button
+                onClick={restoreDemoData}
+                className="text-[#EA580C] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Load 10 Sample Vehicles</span>
+              </button>
+            </div>
+          </div>
+        ) : searchFilters.listingFormat === 'AUCTION' ? (
+          /* EMPTY STATE 2: No Live Auctions Active Right Now */
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto my-8 shadow-xs">
+            <div className="w-14 h-14 bg-orange-50 text-[#C2410C] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-orange-100">
+              <Gavel className="w-7 h-7" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 font-heading">
+              No Live 24-Hour Auctions In Progress
+            </h2>
+            <p className="text-sm text-slate-500 mt-2.5 leading-relaxed max-w-md mx-auto">
+              Live auctions are timed drops featuring pre-authorized buyer bidding and no-reserve options. Check back soon or convert one of your listings into a live auction room!
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+              <button
+                onClick={() => setSearchFilters({ listingFormat: 'ALL', noReserveOnly: false })}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2"
+              >
+                <span>Browse Buy-It-Now Whips ({allListings.length})</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => navigateTo('sell')}
+                className="bg-orange-50 hover:bg-orange-100 text-[#C2410C] border border-orange-200 text-xs font-semibold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Gavel className="w-3.5 h-3.5" />
+                <span>Launch an Auction</span>
+              </button>
+            </div>
+          </div>
         ) : (
-          /* Empty State */
+          /* EMPTY STATE 3: Search/Filter Criteria Mismatch */
           <div className="bg-white border border-slate-200/90 rounded-2xl p-10 sm:p-14 text-center max-w-lg mx-auto my-8 shadow-xs">
             <div className="w-12 h-12 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Car className="w-6 h-6" />

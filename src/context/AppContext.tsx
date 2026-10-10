@@ -11,6 +11,11 @@ import {
   AdminAuditLog,
   SavedSearch,
   ListingStatus,
+  Transaction,
+  TransactionAddon,
+  AddonType,
+  calculatePerformanceFee,
+  ADDON_PRICING,
 } from '../types';
 import { MarketplaceStorage, PlatformConfig } from '../services/storageService';
 import { MarketRegion, POPULAR_MARKETS, calculateDistanceMiles, resolveLocationFromZip } from '../services/geoService';
@@ -19,6 +24,30 @@ interface AppContextType {
   currentUser: User;
   switchUser: (userId: string) => void;
   allUsers: User[];
+
+  // Authentication & Customer Accounts
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  openAuthModal: (initialTab?: 'login' | 'register') => void;
+  authModalInitialTab: 'login' | 'register';
+  registerCustomer: (params: {
+    name: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    state?: string;
+    role?: 'BUYER' | 'SELLER' | 'DEALER';
+    isDealer?: boolean;
+    dealerName?: string;
+  }) => User;
+  loginCustomer: (emailOrPhone: string) => boolean;
+  logoutCustomer: () => void;
+
+  // Production vs Demo Data Controls
+  isSeedDataEnabled: boolean;
+  purgeAllDemoData: () => void;
+  restoreDemoData: () => void;
+  setSeedDataMode: (mode: 'demo' | 'clean') => void;
   
   // Navigation & View state
   currentView: 'home' | 'browse' | 'detail' | 'sell' | 'saved' | 'messages' | 'admin' | 'safety' | 'profile';
@@ -63,6 +92,24 @@ interface AppContextType {
   appointments: Appointment[];
   createAppointment: (listingId: string, date: string, timeSlot: string, safeMeetupNote: string) => void;
   updateAppointmentStatus: (aptId: string, status: Appointment['status']) => void;
+
+  // NEW PRICING & TRANSACTION COLLECTION FRAMEWORK
+  transactions: Transaction[];
+  authorizeBuyerHold: (
+    listingId: string,
+    meetTime?: string,
+    initialAddons?: AddonType[]
+  ) => { success: boolean; transaction: Transaction };
+  finalizeTradeAndCaptureFee: (
+    transactionId: string,
+    finalSalePrice: number,
+    additionalAddons?: AddonType[]
+  ) => { success: boolean; performanceFee: number; totalCaptured: number };
+  claimFlakePenalty: (transactionId: string, reason?: string) => { success: boolean };
+  releaseHoldForUndisclosedFlaw: (transactionId: string, flawReason: string) => { success: boolean };
+  requestMobilePPI: (listingId: string, notes?: string) => { success: boolean; chargeId: string };
+  requestAddon: (transactionId: string, addonType: AddonType) => { success: boolean };
+  getTransactionForListing: (listingId: string) => Transaction | undefined;
 
   // Admin & Moderation
   reports: ReportSubmission[];
@@ -136,11 +183,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>(() => MarketplaceStorage.getOffers());
   const [appointments, setAppointments] = useState<Appointment[]>(() => MarketplaceStorage.getAppointments());
+  const [transactions, setTransactions] = useState<Transaction[]>(() => MarketplaceStorage.getTransactions());
   const [reports, setReports] = useState<ReportSubmission[]>(() => MarketplaceStorage.getReports());
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>(() => MarketplaceStorage.getAuditLogs());
   const [platformConfig, setPlatformConfig] = useState<PlatformConfig>(() => MarketplaceStorage.getPlatformConfig());
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<'login' | 'register'>('login');
+
+  const openAuthModal = (initialTab: 'login' | 'register' = 'login') => {
+    setAuthModalInitialTab(initialTab);
+    setIsAuthModalOpen(true);
+  };
+
+  const registerCustomer = (params: {
+    name: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    state?: string;
+    role?: 'BUYER' | 'SELLER' | 'DEALER';
+    isDealer?: boolean;
+    dealerName?: string;
+  }) => {
+    const newUser = MarketplaceStorage.registerUser(params);
+    refreshAll();
+    showNotification(`Welcome to MyNextWhip, ${newUser.name}! Profile verified & ready.`, 'success');
+    return newUser;
+  };
+
+  const loginCustomer = (emailOrPhone: string) => {
+    const user = MarketplaceStorage.loginUser(emailOrPhone);
+    if (user) {
+      refreshAll();
+      showNotification(`Welcome back, ${user.name}!`, 'success');
+      return true;
+    }
+    showNotification('No matching account found with that email or phone number.', 'warning');
+    return false;
+  };
+
+  const logoutCustomer = () => {
+    const users = MarketplaceStorage.getUsers();
+    if (users.length > 0) {
+      MarketplaceStorage.setCurrentUser(users[0].id);
+      refreshAll();
+      showNotification('Signed out of profile.', 'info');
+    }
+  };
+
+  const isSeedDataEnabled = MarketplaceStorage.isSeedDataEnabled();
+
+  const purgeAllDemoData = () => {
+    MarketplaceStorage.purgeAllDemoData();
+    refreshAll();
+    showNotification('All demo listings & test data purged. Clean Production Slate is active!', 'success');
+  };
+
+  const restoreDemoData = () => {
+    MarketplaceStorage.restoreDemoData();
+    refreshAll();
+    showNotification('Sample demo inventory & listings restored.', 'info');
+  };
+
+  const setSeedDataMode = (mode: 'demo' | 'clean') => {
+    MarketplaceStorage.setSeedDataMode(mode);
+    refreshAll();
+    showNotification(
+      mode === 'clean'
+        ? 'Clean Production Slate active. Ready for real customer listings!'
+        : 'Demo Mode active with sample vehicles.',
+      'info'
+    );
+  };
 
   const showNotification = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
     setNotification({ message, type });
@@ -159,6 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setConversations(MarketplaceStorage.getConversations());
     setOffers(MarketplaceStorage.getOffers());
     setAppointments(MarketplaceStorage.getAppointments());
+    setTransactions(MarketplaceStorage.getTransactions());
     setReports(MarketplaceStorage.getReports());
     setAuditLogs(MarketplaceStorage.getAuditLogs());
     setPlatformConfig(MarketplaceStorage.getPlatformConfig());
@@ -501,6 +619,257 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showNotification(`Appointment ${status.toLowerCase()}`, 'info');
   };
 
+  // ---------------------------------------------------------------------------
+  // NEW PRICING STRUCTURE & TRANSACTION COLLECTION IMPLEMENTATION
+  // ---------------------------------------------------------------------------
+
+  const getTransactionForListing = (listingId: string): Transaction | undefined => {
+    return transactions.find((t) => t.listingId === listingId && t.status !== 'RELEASED_VOID');
+  };
+
+  const authorizeBuyerHold = (
+    listingId: string,
+    meetTime?: string,
+    initialAddons: AddonType[] = []
+  ): { success: boolean; transaction: Transaction } => {
+    const listing = MarketplaceStorage.getListingById(listingId);
+    if (!listing) throw new Error('Listing not found');
+
+    const txId = `tx_${Date.now()}`;
+    const addonsList: TransactionAddon[] = initialAddons.map((type) => ({
+      id: `addon_${Date.now()}_${type.toLowerCase()}`,
+      transactionId: txId,
+      addonType: type,
+      name: ADDON_PRICING[type].name,
+      price: ADDON_PRICING[type].price,
+      stripeChargeId: `ch_stripe_${Date.now()}`,
+      status: 'AUTHORIZED',
+      createdAt: new Date().toISOString(),
+      details: ADDON_PRICING[type].description,
+    }));
+
+    const newTx: Transaction = {
+      id: txId,
+      listingId,
+      listingTitle: `${listing.vehicle.year} ${listing.vehicle.make} ${listing.vehicle.model}`,
+      listingImage: listing.photos[0]?.url || '',
+      sellerId: listing.sellerId,
+      sellerName: listing.seller.name,
+      buyerId: currentUser.id,
+      buyerName: currentUser.name,
+      buyerCardLast4: '4242',
+      stripePaymentIntentId: `pi_hold_25_${Date.now()}`,
+      status: 'HOLD_AUTHORIZED',
+      holdAmount: 25.0,
+      scheduledMeetTime: meetTime || new Date(Date.now() + 86400000 * 2).toISOString(),
+      addons: addonsList,
+      notes: 'Stripe $25 anti-flake hold placed. Listing committed for scheduled viewing.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    MarketplaceStorage.saveTransaction(newTx);
+    setTransactions(MarketplaceStorage.getTransactions());
+
+    // Webhook simulation: payment_intent.amount_capturable_updated
+    // Transitions listing status from ACTIVE to COMMITTED
+    MarketplaceStorage.updateListingStatus(
+      listingId,
+      'COMMITTED',
+      'Buyer placed $25 anti-flake hold. Viewing window locked & listing marked COMMITTED.',
+      currentUser
+    );
+    setAllListings(MarketplaceStorage.getListings());
+
+    showNotification(
+      '$25 Anti-Flake Hold Authorized. Viewing window locked & listing marked COMMITTED!',
+      'success'
+    );
+    return { success: true, transaction: newTx };
+  };
+
+  const finalizeTradeAndCaptureFee = (
+    transactionId: string,
+    finalSalePrice: number,
+    additionalAddons: AddonType[] = []
+  ): { success: boolean; performanceFee: number; totalCaptured: number } => {
+    const tx = transactions.find((t) => t.id === transactionId);
+    if (!tx) throw new Error('Transaction not found');
+
+    const listing = allListings.find((l) => l.id === tx.listingId);
+    const listingType =
+      listing?.listingType === 'LIVE_AUCTION' || listing?.listingFormat === 'AUCTION'
+        ? 'LIVE_AUCTION'
+        : 'BUY_IT_NOW';
+    const performanceFee = calculatePerformanceFee(finalSalePrice, listingType);
+
+    const newAddons: TransactionAddon[] = additionalAddons.map((type) => ({
+      id: `addon_${Date.now()}_${type.toLowerCase()}`,
+      transactionId: tx.id,
+      addonType: type,
+      name: ADDON_PRICING[type].name,
+      price: ADDON_PRICING[type].price,
+      stripeChargeId: `ch_settle_${Date.now()}`,
+      status: 'CAPTURED',
+      createdAt: new Date().toISOString(),
+      details: ADDON_PRICING[type].description,
+    }));
+
+    const allAddons = [...tx.addons, ...newAddons];
+    const addonsTotal = allAddons.reduce((sum, a) => sum + a.price, 0);
+    const totalCaptured = performanceFee + addonsTotal;
+
+    // Webhook simulation: payment_intent.succeeded (performance fee captured)
+    MarketplaceStorage.updateTransaction(tx.id, {
+      status: 'CAPTURED_PERFORMANCE',
+      finalPrice: finalSalePrice,
+      performanceFee,
+      addons: allAddons.map((a) => ({ ...a, status: 'CAPTURED' })),
+      resolutionNote: `Trade completed at $${finalSalePrice.toLocaleString()}. Scaled performance fee ($${performanceFee}) + add-ons ($${addonsTotal}) captured programmatically from linked card.`,
+    });
+
+    MarketplaceStorage.updateListingStatus(
+      tx.listingId,
+      'SETTLED',
+      `Trade closed for $${finalSalePrice.toLocaleString()}. Performance fee captured.`,
+      currentUser
+    );
+
+    setTransactions(MarketplaceStorage.getTransactions());
+    setAllListings(MarketplaceStorage.getListings());
+
+    showNotification(
+      `Deal Settled! Scaled fee of $${performanceFee.toFixed(2)} captured programmatically. Zero commissions on cash!`,
+      'success'
+    );
+
+    return { success: true, performanceFee, totalCaptured };
+  };
+
+  const claimFlakePenalty = (transactionId: string, reason?: string): { success: boolean } => {
+    const tx = transactions.find((t) => t.id === transactionId);
+    if (!tx) throw new Error('Transaction not found');
+
+    // Webhook simulation: payment_intent.succeeded (penalty payout)
+    MarketplaceStorage.updateTransaction(tx.id, {
+      status: 'CAPTURED_PENALTY',
+      payoutToSellerAmount: 25.0,
+      resolutionNote: `Buyer flaked outside 2hr window. $25 hold permanently captured as seller compensation. Reason: ${reason || 'Buyer no-show'}.`,
+    });
+
+    // Listing resets back to ACTIVE in search feed
+    MarketplaceStorage.updateListingStatus(
+      tx.listingId,
+      'ACTIVE',
+      'Reset to ACTIVE after buyer no-show penalty enforcement.',
+      currentUser
+    );
+
+    setTransactions(MarketplaceStorage.getTransactions());
+    setAllListings(MarketplaceStorage.getListings());
+
+    showNotification('Seller Guarantee Enforced: $25 no-show penalty captured and credited to seller!', 'warning');
+    return { success: true };
+  };
+
+  const releaseHoldForUndisclosedFlaw = (transactionId: string, flawReason: string): { success: boolean } => {
+    const tx = transactions.find((t) => t.id === transactionId);
+    if (!tx) throw new Error('Transaction not found');
+
+    // Webhook simulation: payment_intent.canceled
+    MarketplaceStorage.updateTransaction(tx.id, {
+      status: 'RELEASED_VOID',
+      resolutionNote: `Buyer passed due to undisclosed flaw: "${flawReason}". $25 authorization hold released at $0 cost.`,
+    });
+
+    // Listing resets back to ACTIVE in search feed
+    MarketplaceStorage.updateListingStatus(
+      tx.listingId,
+      'ACTIVE',
+      'Reset to ACTIVE after buyer passed due to undisclosed issue.',
+      currentUser
+    );
+
+    setTransactions(MarketplaceStorage.getTransactions());
+    setAllListings(MarketplaceStorage.getListings());
+
+    showNotification('No Trade, No Fee: $25 hold instantly released back to buyer at $0 cost.', 'info');
+    return { success: true };
+  };
+
+  const requestMobilePPI = (listingId: string, notes?: string): { success: boolean; chargeId: string } => {
+    const listing = MarketplaceStorage.getListingById(listingId);
+    if (!listing) throw new Error('Listing not found');
+
+    const chargeId = `ch_ppi_95_${Date.now()}`;
+    let tx = transactions.find((t) => t.listingId === listingId && t.status !== 'RELEASED_VOID');
+
+    const addon: TransactionAddon = {
+      id: `addon_ppi_${Date.now()}`,
+      transactionId: tx ? tx.id : `tx_ppi_${Date.now()}`,
+      addonType: 'MOBILE_PPI',
+      name: ADDON_PRICING.MOBILE_PPI.name,
+      price: ADDON_PRICING.MOBILE_PPI.price,
+      stripeChargeId: chargeId,
+      status: 'CAPTURED',
+      createdAt: new Date().toISOString(),
+      details: notes || 'Front Range independent mobile mechanic dispatched for 50-point diagnostic inspection.',
+    };
+
+    if (tx) {
+      tx.addons.push(addon);
+      MarketplaceStorage.updateTransaction(tx.id, { addons: tx.addons });
+    } else {
+      const newTx: Transaction = {
+        id: addon.transactionId,
+        listingId,
+        listingTitle: `${listing.vehicle.year} ${listing.vehicle.make} ${listing.vehicle.model}`,
+        listingImage: listing.photos[0]?.url || '',
+        sellerId: listing.sellerId,
+        sellerName: listing.seller.name,
+        buyerId: currentUser.id,
+        buyerName: currentUser.name,
+        buyerCardLast4: '4242',
+        stripePaymentIntentId: `pi_ppi_${Date.now()}`,
+        status: 'HOLD_AUTHORIZED',
+        holdAmount: 25.0,
+        addons: [addon],
+        notes: 'Mobile PPI requested prior to in-person inspection.',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      MarketplaceStorage.saveTransaction(newTx);
+    }
+
+    setTransactions(MarketplaceStorage.getTransactions());
+    showNotification('Mobile Pre-Purchase Inspection ($95) authorized! Denver certified mechanic notified.', 'success');
+    return { success: true, chargeId };
+  };
+
+  const requestAddon = (transactionId: string, addonType: AddonType): { success: boolean } => {
+    const tx = transactions.find((t) => t.id === transactionId);
+    if (!tx) throw new Error('Transaction not found');
+
+    const addon: TransactionAddon = {
+      id: `addon_${Date.now()}_${addonType.toLowerCase()}`,
+      transactionId: tx.id,
+      addonType,
+      name: ADDON_PRICING[addonType].name,
+      price: ADDON_PRICING[addonType].price,
+      stripeChargeId: `ch_${addonType.toLowerCase()}_${Date.now()}`,
+      status: 'AUTHORIZED',
+      createdAt: new Date().toISOString(),
+      details: ADDON_PRICING[addonType].description,
+    };
+
+    tx.addons.push(addon);
+    MarketplaceStorage.updateTransaction(tx.id, { addons: tx.addons });
+    setTransactions(MarketplaceStorage.getTransactions());
+
+    showNotification(`${ADDON_PRICING[addonType].name} ($${ADDON_PRICING[addonType].price}) added to transaction!`, 'success');
+    return { success: true };
+  };
+
   // Moderation
   const submitReport = (listingId: string, reason: ReportSubmission['reason'], details: string) => {
     const listing = MarketplaceStorage.getListingById(listingId);
@@ -559,6 +928,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         switchUser,
         allUsers,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        openAuthModal,
+        authModalInitialTab,
+        registerCustomer,
+        loginCustomer,
+        logoutCustomer,
+        isSeedDataEnabled,
+        purgeAllDemoData,
+        restoreDemoData,
+        setSeedDataMode,
         currentView,
         navigateTo,
         selectedWhipSlug,
@@ -590,6 +970,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         appointments,
         createAppointment,
         updateAppointmentStatus,
+        transactions,
+        authorizeBuyerHold,
+        finalizeTradeAndCaptureFee,
+        claimFlakePenalty,
+        releaseHoldForUndisclosedFlaw,
+        requestMobilePPI,
+        requestAddon,
+        getTransactionForListing,
         reports,
         auditLogs,
         submitReport,

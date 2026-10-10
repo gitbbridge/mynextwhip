@@ -1,4 +1,4 @@
-import { Listing, User, Appointment, Offer, Conversation, ChatMessage, ReportSubmission, AdminAuditLog } from '../types';
+import { Listing, User, Appointment, Offer, Conversation, ChatMessage, ReportSubmission, AdminAuditLog, Transaction } from '../types';
 
 export const SEED_USERS: User[] = [
   {
@@ -315,7 +315,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_civ_1',
-        url: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://cdn.dealrimages.com/SC%2FG2%2F80%2FMZZXNS995O5TME.jpg',
         label: 'Front Exterior',
         type: 'photo',
       },
@@ -335,7 +335,7 @@ export const SEED_LISTINGS: Listing[] = [
     coldStartVideo: {
       id: 'vid_civ_cold',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80',
+      thumbnailUrl: 'https://cdn.dealrimages.com/SC%2FG2%2F80%2FMZZXNS995O5TME.jpg',
       label: 'Cold Start & Cluster Gauge Video',
       type: 'video_cold_start',
       durationSeconds: 24,
@@ -481,7 +481,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_mia_1',
-        url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://d28bzp2u75t3bx.cloudfront.net/images/listing/One-Owner-1993-Mazda-Miata-Limited-Edition-JM1NA3512P1408106-bat/1993_mazda_miata_limited_edition_1597850711a7ce40810bf523f14616D21-488C-4854-84F1-38BA3E731D3C__90cd6811.webp',
         label: 'Front Pop-Up Lights Up',
         type: 'photo',
       },
@@ -495,7 +495,7 @@ export const SEED_LISTINGS: Listing[] = [
     coldStartVideo: {
       id: 'vid_mia_cold',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
+      thumbnailUrl: 'https://d28bzp2u75t3bx.cloudfront.net/images/listing/One-Owner-1993-Mazda-Miata-Limited-Edition-JM1NA3512P1408106-bat/1993_mazda_miata_limited_edition_1597850711a7ce40810bf523f14616D21-488C-4854-84F1-38BA3E731D3C__90cd6811.webp',
       label: 'Cold Start Video with Pop-Up Lights Actuation',
       type: 'video_cold_start',
       durationSeconds: 28,
@@ -642,7 +642,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_xj_1',
-        url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://media.carsandbids.com/cdn-cgi/image/width=1800,quality=70/da6e8a1d4896127a9d2adf83461993b45339474c/photos/rNkeqEl5-nNZtAcDQYA-(edit).jpg?t=172579750073',
         label: 'Front Stance & Steel Bumper',
         type: 'photo',
       },
@@ -656,7 +656,7 @@ export const SEED_LISTINGS: Listing[] = [
     coldStartVideo: {
       id: 'vid_xj_cold',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
+      thumbnailUrl: 'https://media.carsandbids.com/cdn-cgi/image/width=1800,quality=70/da6e8a1d4896127a9d2adf83461993b45339474c/photos/rNkeqEl5-nNZtAcDQYA-(edit).jpg?t=172579750073',
       label: '4.0L Cold Start Video & Exhaust Sound',
       type: 'video_cold_start',
       durationSeconds: 30,
@@ -754,7 +754,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_cv_1',
-        url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://interceptorking.com/wp-content/uploads/2025/12/vic-6-1200x676.jpg',
         label: 'Front Angle',
         type: 'photo',
       },
@@ -858,7 +858,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_fxt_1',
-        url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://cdn.dealrimages.com/7B%2FVM%2FO5%2FHNH1CPSZFKXBE9.jpg',
         label: 'Front Hood Scoop & Front Fascia',
         type: 'photo',
       },
@@ -866,7 +866,7 @@ export const SEED_LISTINGS: Listing[] = [
     coldStartVideo: {
       id: 'vid_fxt_cold',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80',
+      thumbnailUrl: 'https://cdn.dealrimages.com/7B%2FVM%2FO5%2FHNH1CPSZFKXBE9.jpg',
       label: 'Cold Start Showing Boxer Rumble & Warmup Smoke Point',
       type: 'video_cold_start',
       durationSeconds: 34,
@@ -1086,7 +1086,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_ast_1',
-        url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://heyauto.com/_next/image?url=https%3A%2F%2Fheyauto.blob.core.windows.net%2Ffor-sale%2F2005-Chevrolet-Astro-ha2666117-2-lg.jpeg&w=1920&q=75',
         label: 'Exterior Van Angle',
         type: 'photo',
       },
@@ -1166,7 +1166,7 @@ export const SEED_LISTINGS: Listing[] = [
     photos: [
       {
         id: 'ph_e36_1',
-        url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80',
+        url: 'https://media.carsandbids.com/cdn-cgi/image/width=1800,quality=70/d9b636c2ec84ddc3bc7f2eb32861b39bdd5f9683/photos/9aAG52J8.9PWz-8j-O-(edit).jpg?t=162925717162',
         label: 'Front Stance',
         type: 'photo',
       },
@@ -1470,3 +1470,70 @@ export const SEED_AUDIT_LOGS: AdminAuditLog[] = [
     notes: 'Clean Colorado title photo reviewed without active liens.',
   },
 ];
+
+export const SEED_TRANSACTIONS: Transaction[] = [
+  {
+    id: 'tx_tacoma_1',
+    listingId: 'whip_tacoma_2008',
+    listingTitle: '2008 Toyota Tacoma SR5 4x4',
+    listingImage: 'https://images.unsplash.com/photo-1559416523-140ddc3d238c?auto=format&fit=crop&w=400&q=80',
+    sellerId: 'user_sarah',
+    sellerName: 'Sarah Jenkins',
+    buyerId: 'user_mike',
+    buyerName: 'Mike Reynolds',
+    buyerCardLast4: '4242',
+    stripePaymentIntentId: 'pi_3P0025_hold_mike_tacoma',
+    status: 'HOLD_AUTHORIZED',
+    holdAmount: 25.0,
+    scheduledMeetTime: '2026-09-27T10:00:00Z',
+    addons: [
+      {
+        id: 'addon_ppi_1',
+        transactionId: 'tx_tacoma_1',
+        addonType: 'MOBILE_PPI',
+        name: 'Mobile Pre-Purchase Inspection (PPI)',
+        price: 95.0,
+        stripeChargeId: 'ch_ppi_95_front_range_mechanic',
+        status: 'AUTHORIZED',
+        createdAt: '2026-09-23T15:05:00Z',
+        details: 'Dispatched to Front Range Mobile Diagnostics (Colorado Springs)',
+      },
+    ],
+    notes: 'Buyer card bound with $25 anti-flake hold. Viewing window locked at Police Dept Safe Exchange.',
+    createdAt: '2026-09-23T15:00:00Z',
+    updatedAt: '2026-09-23T15:05:00Z',
+  },
+  {
+    id: 'tx_civic_settled',
+    listingId: 'whip_civic_2004',
+    listingTitle: '2004 Honda Civic EX Coupe',
+    listingImage: 'https://cdn.dealrimages.com/SC%2FG2%2F80%2FMZZXNS995O5TME.jpg',
+    sellerId: 'user_dave',
+    sellerName: 'Dave Kovacs',
+    buyerId: 'user_mike',
+    buyerName: 'Mike Reynolds',
+    buyerCardLast4: '8814',
+    stripePaymentIntentId: 'pi_3P9942_closed_civic',
+    status: 'CAPTURED_PERFORMANCE',
+    holdAmount: 25.0,
+    finalPrice: 3200.0,
+    performanceFee: 49.0, // Scaled tier ($3,000-$5,999 = $49.00)
+    addons: [
+      {
+        id: 'addon_tow_1',
+        transactionId: 'tx_civic_settled',
+        addonType: 'FLATBED_TOWING',
+        name: 'Local Flatbed Towing Dispatch',
+        price: 45.0,
+        stripeChargeId: 'ch_tow_45_mile_high',
+        status: 'CAPTURED',
+        createdAt: '2026-09-15T12:00:00Z',
+        details: 'Denver metro transport to Highlands garage',
+      },
+    ],
+    resolutionNote: 'Keys exchanged in person. Deal settled. $49 performance fee + $45 towing captured.',
+    createdAt: '2026-09-15T11:30:00Z',
+    updatedAt: '2026-09-15T14:00:00Z',
+  },
+];
+

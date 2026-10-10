@@ -16,6 +16,10 @@ import {
   Eye,
   Check,
   Flag,
+  Database,
+  Trash2,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -30,11 +34,17 @@ export const AdminDashboard: React.FC = () => {
     updatePlatformConfig,
     currentUser,
     navigateTo,
+    isSeedDataEnabled,
+    purgeAllDemoData,
+    restoreDemoData,
+    setSeedDataMode,
+    showNotification,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'moderation' | 'all' | 'reports' | 'logs' | 'config'>('moderation');
+  const [activeTab, setActiveTab] = useState<'moderation' | 'all' | 'reports' | 'logs' | 'config' | 'data'>('moderation');
   const [rejectReasonModal, setRejectReasonModal] = useState<string | null>(null);
   const [rejectReasonInput, setRejectReasonInput] = useState('VIN documentation image is illegible.');
+  const [purgeConfirmModalOpen, setPurgeConfirmModalOpen] = useState(false);
 
   const [listingFeeInput, setListingFeeInput] = useState(platformConfig.standardListingFee.toString());
 
@@ -180,6 +190,25 @@ export const AdminDashboard: React.FC = () => {
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Platform Settings</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('data')}
+            className={`py-3 px-4 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'data'
+                ? 'border-[#EA580C] text-[#EA580C]'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>Production Slate & Data</span>
+            <span
+              className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold uppercase ${
+                isSeedDataEnabled ? 'bg-amber-900/80 text-amber-300' : 'bg-emerald-900/80 text-emerald-300'
+              }`}
+            >
+              {isSeedDataEnabled ? 'Demo' : 'Clean'}
+            </span>
           </button>
         </div>
       </div>
@@ -461,7 +490,168 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* TAB 6: Production Slate & Demo Data Management */}
+        {activeTab === 'data' && (
+          <div className="space-y-6 max-w-3xl">
+            {/* Status Card */}
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-100">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-2xl ${isSeedDataEnabled ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    <Database className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-black text-zinc-900 font-heading">
+                        Database Environment Status
+                      </h2>
+                      <span
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                          isSeedDataEnabled
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        }`}
+                      >
+                        {isSeedDataEnabled ? 'Demo Mode Active' : 'Clean Production Slate'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {isSeedDataEnabled
+                        ? 'Currently populated with 10 sample Denver vehicles, test offers, and mock chat messages.'
+                        : 'Pristine live marketplace mode. Zero demo listings or fake transactions.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isSeedDataEnabled ? (
+                    <button
+                      onClick={() => setPurgeConfirmModalOpen(true)}
+                      className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Purge All Demo Data</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={restoreDemoData}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer shrink-0"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Restore Demo Data</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Real-time Inventory Counts */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                  <div className="text-[11px] font-bold uppercase text-zinc-400">Total Listings</div>
+                  <div className="text-xl font-black text-zinc-900 font-mono-numbers mt-0.5">
+                    {allListings.length}
+                  </div>
+                </div>
+                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                  <div className="text-[11px] font-bold uppercase text-zinc-400">Active Published</div>
+                  <div className="text-xl font-black text-emerald-600 font-mono-numbers mt-0.5">
+                    {activeListings.length}
+                  </div>
+                </div>
+                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                  <div className="text-[11px] font-bold uppercase text-zinc-400">Pending Review</div>
+                  <div className="text-xl font-black text-amber-600 font-mono-numbers mt-0.5">
+                    {pendingReviewListings.length}
+                  </div>
+                </div>
+                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                  <div className="text-[11px] font-bold uppercase text-zinc-400">Open Reports</div>
+                  <div className="text-xl font-black text-red-600 font-mono-numbers mt-0.5">
+                    {pendingReports.length}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Production Architecture & Config Guide */}
+            <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-base text-zinc-900 font-heading">
+                  Production Deployment Configuration
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                When deploying MyNextWhip to Render, AWS, Vercel, or custom servers, you can permanently disable demo seed data by setting the environment variable:
+              </p>
+
+              <div className="p-3.5 bg-zinc-950 text-zinc-100 rounded-xl font-mono text-xs overflow-x-auto border border-zinc-800">
+                <code>VITE_ENABLE_SEED_DATA="false"</code>
+              </div>
+
+              <div className="text-xs text-zinc-500 space-y-1.5 pt-2">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>Automatic Clean Boot:</strong> When set to false, new visitors and browser sessions start with zero demo records.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>Customer Account Creation:</strong> Any registered user creates their own verified profile with their real name, phone, and ZIP code.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span><strong>Instant Reversal:</strong> If you ever need to demonstrate features to stakeholders, you can re-load the 10 demo whips with a single click.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Purge Demo Data Confirmation Modal */}
+      {purgeConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-zinc-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-zinc-900 font-heading">
+                Purge All Demo Data?
+              </h3>
+              <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
+                This will immediately remove all 10 seed vehicle listings, mock offers, appointments, conversations, and test transactions. Your application will enter a <strong>Clean Production Slate</strong> ready for real customer listings.
+              </p>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] rounded-xl flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>You can restore sample test data at any time from this console or the header menu.</span>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                onClick={() => setPurgeConfirmModalOpen(false)}
+                className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  purgeAllDemoData();
+                  setPurgeConfirmModalOpen(false);
+                }}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Yes, Purge All Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {rejectReasonModal && (

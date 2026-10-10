@@ -271,8 +271,31 @@ export const MessagesView: React.FC = () => {
                 </form>
               </>
             ) : (
-              <div className="flex items-center justify-center h-full p-8 text-zinc-400 text-xs">
-                Select a conversation on the left to view messages.
+              <div className="flex flex-col items-center justify-center h-full p-8 sm:p-12 text-center my-auto">
+                <div className="w-14 h-14 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200">
+                  <MessageSquare className="w-7 h-7 text-[#EA580C]" />
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 font-heading">
+                  Your Secure Inbox is Ready
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-500 mt-2 max-w-md leading-relaxed">
+                  Conversations on MyNextWhip are tied directly to vehicle listings. When you inquire on a whip, submit an offer, or schedule a test drive, your thread appears here with verified title disclosures.
+                </p>
+
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => navigateTo('browse')}
+                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition shadow-xs cursor-pointer"
+                  >
+                    Browse Available Inventory
+                  </button>
+                  <button
+                    onClick={() => navigateTo('sell')}
+                    className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    List Your Vehicle
+                  </button>
+                </div>
               </div>
             )}
           </div>

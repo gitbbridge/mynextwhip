@@ -10,6 +10,7 @@ import {
   SavedSearch,
   ListingStatus,
   AuctionBid,
+  Transaction,
 } from '../types';
 import {
   SEED_USERS,
@@ -20,6 +21,7 @@ import {
   SEED_CHAT_MESSAGES,
   SEED_REPORTS,
   SEED_AUDIT_LOGS,
+  SEED_TRANSACTIONS,
 } from './seedData';
 
 const STORAGE_KEYS = {
@@ -35,11 +37,20 @@ const STORAGE_KEYS = {
   REPORTS: 'mynextwhip_reports',
   AUDIT_LOGS: 'mynextwhip_audit_logs',
   PLATFORM_CONFIG: 'mynextwhip_platform_config',
+  TRANSACTIONS: 'mynextwhip_transactions',
+  SEED_DATA_MODE: 'mynextwhip_seed_data_mode',
 };
 
 export interface PlatformConfig {
-  standardListingFee: number; // e.g. 19
+  standardListingFee: number; // e.g. 19 or 0
   featuredListingFee: number; // e.g. 29
+  antiFlakeHoldAmount: number; // $25
+  scaledFeeTierLow: number; // $25 (under $3k)
+  scaledFeeTierMid: number; // $49 ($3k - $6k)
+  scaledFeeTierHigh: number; // $99 ($6k - $10k)
+  mobilePpiFee: number; // $95
+  flatbedTowFee: number; // $45
+  tempInsuranceFee: number; // $149
   allowDealerSubscriptions: boolean;
   activeMarketCity: string;
   activeMarketZip: string;
@@ -49,6 +60,13 @@ export interface PlatformConfig {
 const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   standardListingFee: 19,
   featuredListingFee: 29,
+  antiFlakeHoldAmount: 25,
+  scaledFeeTierLow: 25,
+  scaledFeeTierMid: 49,
+  scaledFeeTierHigh: 99,
+  mobilePpiFee: 95,
+  flatbedTowFee: 45,
+  tempInsuranceFee: 149,
   allowDealerSubscriptions: true,
   activeMarketCity: 'Denver & Front Range, CO',
   activeMarketZip: '80202',
@@ -74,43 +92,91 @@ function safeSet<T>(key: string, value: T): void {
   }
 }
 
+export const PRODUCTION_ADMIN_USER: User = {
+  id: 'user_denver_admin',
+  name: 'Denver Ops Admin',
+  email: 'admin@mynextwhip.com',
+  phone: '(303) 555-0100',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  role: 'ADMIN',
+  verifiedPhone: true,
+  verifiedIdentity: true,
+  verifiedSeller: true,
+  memberSince: '2026-01-01',
+  responseRate: '100%',
+  responseTime: '< 5 min',
+  city: 'Denver',
+  state: 'CO',
+};
+
 export class MarketplaceStorage {
+  static isSeedDataEnabled(): boolean {
+    const mode = safeGet<string | null>(STORAGE_KEYS.SEED_DATA_MODE, null);
+    if (mode === 'clean') return false;
+    if (mode === 'demo') return true;
+    return (import.meta.env.VITE_ENABLE_SEED_DATA ?? 'true') !== 'false';
+  }
+
+  static setSeedDataMode(mode: 'demo' | 'clean'): void {
+    safeSet(STORAGE_KEYS.SEED_DATA_MODE, mode);
+    if (mode === 'clean') {
+      this.purgeAllDemoData();
+    } else {
+      this.restoreDemoData();
+    }
+  }
+
   static init() {
+    const isSeed = this.isSeedDataEnabled();
+
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-      safeSet(STORAGE_KEYS.USERS, SEED_USERS);
+      safeSet(STORAGE_KEYS.USERS, isSeed ? SEED_USERS : [PRODUCTION_ADMIN_USER]);
     }
     if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID)) {
-      safeSet(STORAGE_KEYS.CURRENT_USER_ID, SEED_USERS[0].id); // Default to Mike (buyer)
+      safeSet(STORAGE_KEYS.CURRENT_USER_ID, isSeed ? SEED_USERS[0].id : PRODUCTION_ADMIN_USER.id);
     }
     if (!localStorage.getItem(STORAGE_KEYS.LISTINGS)) {
-      safeSet(STORAGE_KEYS.LISTINGS, SEED_LISTINGS);
-    } else {
-      // Synchronize seed auctions if stored listings predate auction feature
+      safeSet(STORAGE_KEYS.LISTINGS, isSeed ? SEED_LISTINGS : []);
+    } else if (isSeed) {
+      // Synchronize seed listings (photos, auctions) if stored listings predate updates
       const stored = safeGet<Listing[]>(STORAGE_KEYS.LISTINGS, []);
-      const astro = stored.find((l) => l.id === 'whip_astro_2005');
-      if (astro && astro.listingFormat !== 'AUCTION') {
-        const seedAstro = SEED_LISTINGS.find((l) => l.id === 'whip_astro_2005');
-        if (seedAstro && seedAstro.auction) {
-          astro.listingFormat = 'AUCTION';
-          astro.auction = seedAstro.auction;
-          safeSet(STORAGE_KEYS.LISTINGS, stored);
+      let updated = false;
+      for (const seedL of SEED_LISTINGS) {
+        const item = stored.find((l) => l.id === seedL.id);
+        if (item) {
+          if (seedL.photos?.[0]?.url && item.photos?.[0]?.url !== seedL.photos[0].url) {
+            item.photos[0].url = seedL.photos[0].url;
+            updated = true;
+          }
+          if (seedL.coldStartVideo?.thumbnailUrl && item.coldStartVideo && item.coldStartVideo.thumbnailUrl !== seedL.coldStartVideo.thumbnailUrl) {
+            item.coldStartVideo.thumbnailUrl = seedL.coldStartVideo.thumbnailUrl;
+            updated = true;
+          }
+          if (seedL.auction && !item.auction) {
+            item.listingFormat = 'AUCTION';
+            item.auction = seedL.auction;
+            updated = true;
+          }
         }
+      }
+      if (updated) {
+        safeSet(STORAGE_KEYS.LISTINGS, stored);
       }
     }
     if (!localStorage.getItem(STORAGE_KEYS.OFFERS)) {
-      safeSet(STORAGE_KEYS.OFFERS, SEED_OFFERS);
+      safeSet(STORAGE_KEYS.OFFERS, isSeed ? SEED_OFFERS : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.APPOINTMENTS)) {
-      safeSet(STORAGE_KEYS.APPOINTMENTS, SEED_APPOINTMENTS);
+      safeSet(STORAGE_KEYS.APPOINTMENTS, isSeed ? SEED_APPOINTMENTS : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.CONVERSATIONS)) {
-      safeSet(STORAGE_KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+      safeSet(STORAGE_KEYS.CONVERSATIONS, isSeed ? SEED_CONVERSATIONS : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES)) {
-      safeSet(STORAGE_KEYS.CHAT_MESSAGES, SEED_CHAT_MESSAGES);
+      safeSet(STORAGE_KEYS.CHAT_MESSAGES, isSeed ? SEED_CHAT_MESSAGES : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.FAVORITES)) {
-      safeSet(STORAGE_KEYS.FAVORITES, ['whip_tacoma_2008', 'whip_miata_1993']);
+      safeSet(STORAGE_KEYS.FAVORITES, isSeed ? ['whip_tacoma_2008', 'whip_miata_1993'] : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.SAVED_SEARCHES)) {
       const initialSaved: SavedSearch[] = [
@@ -129,34 +195,165 @@ export class MarketplaceStorage {
       safeSet(STORAGE_KEYS.SAVED_SEARCHES, initialSaved);
     }
     if (!localStorage.getItem(STORAGE_KEYS.REPORTS)) {
-      safeSet(STORAGE_KEYS.REPORTS, SEED_REPORTS);
+      safeSet(STORAGE_KEYS.REPORTS, isSeed ? SEED_REPORTS : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
-      safeSet(STORAGE_KEYS.AUDIT_LOGS, SEED_AUDIT_LOGS);
+      safeSet(STORAGE_KEYS.AUDIT_LOGS, isSeed ? SEED_AUDIT_LOGS : []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.PLATFORM_CONFIG)) {
       safeSet(STORAGE_KEYS.PLATFORM_CONFIG, DEFAULT_PLATFORM_CONFIG);
     }
+    if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
+      safeSet(STORAGE_KEYS.TRANSACTIONS, isSeed ? SEED_TRANSACTIONS : []);
+    } else if (isSeed) {
+      const storedTx = safeGet<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, []);
+      let txUpdated = false;
+      for (const seedTx of SEED_TRANSACTIONS) {
+        const match = storedTx.find((t) => t.id === seedTx.id);
+        if (match && match.listingImage !== seedTx.listingImage) {
+          match.listingImage = seedTx.listingImage;
+          txUpdated = true;
+        }
+      }
+      if (txUpdated) {
+        safeSet(STORAGE_KEYS.TRANSACTIONS, storedTx);
+      }
+    }
+  }
+
+  static purgeAllDemoData(): void {
+    safeSet(STORAGE_KEYS.SEED_DATA_MODE, 'clean');
+    safeSet(STORAGE_KEYS.LISTINGS, []);
+    safeSet(STORAGE_KEYS.OFFERS, []);
+    safeSet(STORAGE_KEYS.APPOINTMENTS, []);
+    safeSet(STORAGE_KEYS.CONVERSATIONS, []);
+    safeSet(STORAGE_KEYS.CHAT_MESSAGES, []);
+    safeSet(STORAGE_KEYS.FAVORITES, []);
+    safeSet(STORAGE_KEYS.TRANSACTIONS, []);
+    safeSet(STORAGE_KEYS.REPORTS, []);
+
+    // Filter out seed users, keeping only registered custom users
+    const allUsers = this.getUsers();
+    const seedUserIds = new Set(SEED_USERS.map((u) => u.id));
+    const nonSeedUsers = allUsers.filter((u) => !seedUserIds.has(u.id));
+
+    if (nonSeedUsers.length === 0) {
+      nonSeedUsers.push(PRODUCTION_ADMIN_USER);
+    }
+    safeSet(STORAGE_KEYS.USERS, nonSeedUsers);
+    
+    // Set current user to first non-seed user or admin
+    const current = nonSeedUsers[0];
+    safeSet(STORAGE_KEYS.CURRENT_USER_ID, current.id);
+
+    this.addAuditLog({
+      id: `log_purge_${Date.now()}`,
+      adminId: current.id,
+      adminName: current.name,
+      action: 'PURGE_ALL_DEMO_DATA',
+      targetType: 'SYSTEM',
+      targetId: 'all_demo_records',
+      targetSummary: 'All seed listings, offers, appointments, and test transactions purged for Clean Production Slate.',
+      timestamp: new Date().toISOString(),
+      notes: 'Clean slate activated for live customer inventory.',
+    });
+  }
+
+  static restoreDemoData(): void {
+    safeSet(STORAGE_KEYS.SEED_DATA_MODE, 'demo');
+    safeSet(STORAGE_KEYS.USERS, SEED_USERS);
+    safeSet(STORAGE_KEYS.CURRENT_USER_ID, SEED_USERS[0].id);
+    safeSet(STORAGE_KEYS.LISTINGS, SEED_LISTINGS);
+    safeSet(STORAGE_KEYS.OFFERS, SEED_OFFERS);
+    safeSet(STORAGE_KEYS.APPOINTMENTS, SEED_APPOINTMENTS);
+    safeSet(STORAGE_KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+    safeSet(STORAGE_KEYS.CHAT_MESSAGES, SEED_CHAT_MESSAGES);
+    safeSet(STORAGE_KEYS.FAVORITES, ['whip_tacoma_2008', 'whip_miata_1993']);
+    safeSet(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS);
+    safeSet(STORAGE_KEYS.REPORTS, SEED_REPORTS);
+    safeSet(STORAGE_KEYS.AUDIT_LOGS, SEED_AUDIT_LOGS);
   }
 
   // Users
   static getUsers(): User[] {
-    return safeGet<User[]>(STORAGE_KEYS.USERS, SEED_USERS);
+    const fallback = this.isSeedDataEnabled() ? SEED_USERS : [PRODUCTION_ADMIN_USER];
+    return safeGet<User[]>(STORAGE_KEYS.USERS, fallback);
   }
 
   static getCurrentUser(): User {
     const users = this.getUsers();
-    const currentId = safeGet<string>(STORAGE_KEYS.CURRENT_USER_ID, users[0]?.id || 'user_mike');
-    return users.find((u) => u.id === currentId) || users[0];
+    const fallbackId = users[0]?.id || (this.isSeedDataEnabled() ? 'user_mike' : PRODUCTION_ADMIN_USER.id);
+    const currentId = safeGet<string>(STORAGE_KEYS.CURRENT_USER_ID, fallbackId);
+    return users.find((u) => u.id === currentId) || users[0] || PRODUCTION_ADMIN_USER;
   }
 
   static setCurrentUser(userId: string) {
     safeSet(STORAGE_KEYS.CURRENT_USER_ID, userId);
   }
 
+  static registerUser(params: {
+    name: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    state?: string;
+    role?: 'BUYER' | 'SELLER' | 'DEALER';
+    isDealer?: boolean;
+    dealerName?: string;
+  }): User {
+    const users = this.getUsers();
+    const id = `user_cust_${Date.now()}`;
+    const initials = params.name
+      .split(' ')
+      .map((p) => p[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+
+    const newUser: User = {
+      id,
+      name: params.name,
+      email: params.email,
+      phone: params.phone || '(303) 555-0199',
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(params.name)}&backgroundColor=0284c7,ea580c,16a34a,7c3aed`,
+      role: params.role || 'BUYER',
+      isDealer: params.isDealer || false,
+      dealerName: params.dealerName,
+      verifiedPhone: true,
+      verifiedIdentity: true,
+      verifiedSeller: params.role === 'SELLER' || params.role === 'DEALER',
+      memberSince: new Date().toISOString().split('T')[0],
+      responseRate: '100%',
+      responseTime: '< 15 min',
+      city: params.city || 'Denver',
+      state: params.state || 'CO',
+    };
+
+    users.unshift(newUser);
+    safeSet(STORAGE_KEYS.USERS, users);
+    safeSet(STORAGE_KEYS.CURRENT_USER_ID, newUser.id);
+    return newUser;
+  }
+
+  static loginUser(emailOrPhone: string): User | undefined {
+    const users = this.getUsers();
+    const query = emailOrPhone.trim().toLowerCase();
+    const match = users.find(
+      (u) =>
+        u.email.toLowerCase() === query ||
+        (u.phone && u.phone.replace(/\D/g, '') === query.replace(/\D/g, ''))
+    );
+    if (match) {
+      safeSet(STORAGE_KEYS.CURRENT_USER_ID, match.id);
+      return match;
+    }
+    return undefined;
+  }
+
   // Listings
   static getListings(): Listing[] {
-    return safeGet<Listing[]>(STORAGE_KEYS.LISTINGS, SEED_LISTINGS);
+    const fallback = this.isSeedDataEnabled() ? SEED_LISTINGS : [];
+    return safeGet<Listing[]>(STORAGE_KEYS.LISTINGS, fallback);
   }
 
   static getListingById(id: string): Listing | undefined {
@@ -223,7 +420,8 @@ export class MarketplaceStorage {
 
   // Offers
   static getOffers(): Offer[] {
-    return safeGet<Offer[]>(STORAGE_KEYS.OFFERS, SEED_OFFERS);
+    const fallback = this.isSeedDataEnabled() ? SEED_OFFERS : [];
+    return safeGet<Offer[]>(STORAGE_KEYS.OFFERS, fallback);
   }
 
   static addOffer(offer: Offer): Offer {
@@ -396,7 +594,8 @@ export class MarketplaceStorage {
 
   // Appointments
   static getAppointments(): Appointment[] {
-    return safeGet<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, SEED_APPOINTMENTS);
+    const fallback = this.isSeedDataEnabled() ? SEED_APPOINTMENTS : [];
+    return safeGet<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, fallback);
   }
 
   static createAppointment(apt: Appointment): Appointment {
@@ -426,16 +625,19 @@ export class MarketplaceStorage {
 
   // Conversations & Messages
   static getConversations(): Conversation[] {
-    return safeGet<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, SEED_CONVERSATIONS);
+    const fallback = this.isSeedDataEnabled() ? SEED_CONVERSATIONS : [];
+    return safeGet<Conversation[]>(STORAGE_KEYS.CONVERSATIONS, fallback);
   }
 
   static getMessages(conversationId: string): ChatMessage[] {
-    const all = safeGet<Record<string, ChatMessage[]>>(STORAGE_KEYS.CHAT_MESSAGES, SEED_CHAT_MESSAGES);
+    const fallback = this.isSeedDataEnabled() ? SEED_CHAT_MESSAGES : {};
+    const all = safeGet<Record<string, ChatMessage[]>>(STORAGE_KEYS.CHAT_MESSAGES, fallback);
     return all[conversationId] || [];
   }
 
   static sendMessage(conversationId: string, message: ChatMessage): void {
-    const all = safeGet<Record<string, ChatMessage[]>>(STORAGE_KEYS.CHAT_MESSAGES, SEED_CHAT_MESSAGES);
+    const fallback = this.isSeedDataEnabled() ? SEED_CHAT_MESSAGES : {};
+    const all = safeGet<Record<string, ChatMessage[]>>(STORAGE_KEYS.CHAT_MESSAGES, fallback);
     if (!all[conversationId]) {
       all[conversationId] = [];
     }
@@ -550,7 +752,8 @@ export class MarketplaceStorage {
 
   // Reports
   static getReports(): ReportSubmission[] {
-    return safeGet<ReportSubmission[]>(STORAGE_KEYS.REPORTS, SEED_REPORTS);
+    const fallback = this.isSeedDataEnabled() ? SEED_REPORTS : [];
+    return safeGet<ReportSubmission[]>(STORAGE_KEYS.REPORTS, fallback);
   }
 
   static submitReport(report: ReportSubmission): void {
@@ -570,7 +773,8 @@ export class MarketplaceStorage {
 
   // Audit Logs
   static getAuditLogs(): AdminAuditLog[] {
-    return safeGet<AdminAuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, SEED_AUDIT_LOGS);
+    const fallback = this.isSeedDataEnabled() ? SEED_AUDIT_LOGS : [];
+    return safeGet<AdminAuditLog[]>(STORAGE_KEYS.AUDIT_LOGS, fallback);
   }
 
   static addAuditLog(log: AdminAuditLog): void {
@@ -590,4 +794,37 @@ export class MarketplaceStorage {
     safeSet(STORAGE_KEYS.PLATFORM_CONFIG, updated);
     return updated;
   }
+
+  // Transactions & Performance Fees
+  static getTransactions(): Transaction[] {
+    const fallback = this.isSeedDataEnabled() ? SEED_TRANSACTIONS : [];
+    return safeGet<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, fallback);
+  }
+
+  static getTransactionByListingId(listingId: string): Transaction | undefined {
+    return this.getTransactions().find((tx) => tx.listingId === listingId);
+  }
+
+  static saveTransaction(tx: Transaction): void {
+    const txs = this.getTransactions();
+    const existingIndex = txs.findIndex((t) => t.id === tx.id);
+    if (existingIndex >= 0) {
+      txs[existingIndex] = tx;
+    } else {
+      txs.unshift(tx);
+    }
+    safeSet(STORAGE_KEYS.TRANSACTIONS, txs);
+  }
+
+  static updateTransaction(txId: string, updates: Partial<Transaction>): Transaction | undefined {
+    const txs = this.getTransactions();
+    const tx = txs.find((t) => t.id === txId);
+    if (tx) {
+      Object.assign(tx, updates, { updatedAt: new Date().toISOString() });
+      safeSet(STORAGE_KEYS.TRANSACTIONS, txs);
+      return tx;
+    }
+    return undefined;
+  }
 }
+
